@@ -1,0 +1,8 @@
+RESULT not attacker(f_srv[]) is true.
+RESULT not attacker(fi1[]) is true.
+RESULT not attacker(x1[]) is true.
+RESULT not attacker(s1[]) is true.
+RESULT not attacker(secretK[]) is true.
+RESULT inj-event(TagAcceptsServer(k_79,ei_80)) ==> inj-event(ServerSendsV1(k_79,ei_80)) is true.
+RESULT inj-event(ServerAcceptsTag(id_81,k_82)) ==> inj-event(TagSendsV2(id_81,k_82)) is true.
+RESULT inj-event(TagDone(id_83,k_84)) ==> inj-event(ServerSendsV3(id_83,k_84)) is true.

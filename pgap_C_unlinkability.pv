@@ -1,0 +1,67 @@
+(* ===================================================================
+   PGAP -- tag unlinkability as an observational-equivalence test.
+   Left  side : two sessions of the SAME tag (tag 1).
+   Right side : one session of tag 1 and one session of tag 2.
+   Pseudonyms are fresh per session (ideal pseudonym update).
+   If ProVerif proves equivalence, the attacker cannot tell them apart.
+   Run:  proverif pgap_C_unlinkability.pv
+   =================================================================== *)
+free c: channel.
+type key.
+type nonce.
+
+fun pk(key): key.
+fun aenc(key, key, nonce): bitstring.
+reduc forall m: key, k: key, r: nonce; adec(aenc(m, pk(k), r), k) = m.
+fun mulp(key, key): bitstring.
+equation forall a: key, b: key; mulp(a, b) = mulp(b, a).
+fun h(bitstring): bitstring.
+fun xor(bitstring, bitstring): bitstring.
+reduc forall a: bitstring, b: bitstring; unxor(xor(a, b), b) = a.
+const pconst: bitstring.
+
+free f_srv: key [private].
+free fi1: key [private].
+free fi2: key [private].
+free x1: bitstring [private].
+free x2: bitstring [private].
+free s1: bitstring [private].
+free s2: bitstring [private].
+const tag1: bitstring.
+const tag2: bitstring.
+
+table srvdb(bitstring, bitstring, key).
+
+let TagU(fi: key, x: bitstring, s: bitstring, pkS: key, ids: bitstring) =
+  new r: nonce;
+  let ei = aenc(fi, pkS, r) in
+  out(c, (ids, ei));
+  in(c, (e: bitstring, v1: bitstring));
+  let fb = adec(e, fi) in
+  let K = mulp(fi, fb) in
+  if v1 = h((K, ei, pconst)) then
+  out(c, (xor(x, h((K, e, ei))), xor(s, h((x, K))), h((s, K)))).
+
+let Server(f: key) =
+  in(c, (ids: bitstring, ei: bitstring));
+  get srvdb(id: bitstring, =ids, hk: key) in
+  new r2: nonce;
+  let e = aenc(f, hk, r2) in
+  let fib = adec(ei, f) in
+  let K = mulp(f, fib) in
+  out(c, (e, h((K, ei, pconst))));
+  in(c, (m1: bitstring, m2: bitstring, v2: bitstring));
+  let x = unxor(m1, h((K, e, ei))) in
+  let s = unxor(m2, h((x, K))) in
+  if v2 = h((s, K)) then
+  let idsnew = h((ids, K, e, ei)) in
+  out(c, h((K, idsnew, ei))).
+
+process
+  out(c, pk(f_srv)); out(c, pk(fi1)); out(c, pk(fi2));
+  new ids_a: bitstring; new ids_b: bitstring;
+  insert srvdb(tag1, ids_a, pk(fi1));
+  insert srvdb(choice[tag1, tag2], ids_b, pk(choice[fi1, fi2]));
+  ( !Server(f_srv)
+  | TagU(fi1, x1, s1, pk(f_srv), ids_a)
+  | TagU(choice[fi1, fi2], choice[x1, x2], choice[s1, s2], pk(f_srv), ids_b) )

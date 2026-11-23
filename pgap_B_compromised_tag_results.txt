@@ -1,0 +1,11 @@
+RESULT not attacker(f_srv[]) is false.
+RESULT not attacker(fi1[]) is false.
+RESULT not attacker(x1[]) is false.
+RESULT not attacker(s1[]) is false.
+RESULT not attacker(secretK[]) is false.
+RESULT inj-event(TagAcceptsServer(k_79,ei_80)) ==> inj-event(ServerSendsV1(k_79,ei_80)) is false.
+RESULT (even event(TagAcceptsServer(k_102209,ei_102210)) ==> event(ServerSendsV1(k_102209,ei_102210)) is false.)
+RESULT inj-event(ServerAcceptsTag(id_81,k_82)) ==> inj-event(TagSendsV2(id_81,k_82)) is false.
+RESULT (even event(ServerAcceptsTag(id_111572,k_111573)) ==> event(TagSendsV2(id_111572,k_111573)) is false.)
+RESULT inj-event(TagDone(id_83,k_84)) ==> inj-event(ServerSendsV3(id_83,k_84)) is false.
+RESULT (even event(TagDone(id_116680,k_116681)) ==> event(ServerSendsV3(id_116680,k_116681)) is false.)

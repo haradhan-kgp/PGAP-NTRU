@@ -1,0 +1,2 @@
+RESULT Observational equivalence cannot be proved (bad derivable).
+RESULT Observational equivalence cannot be proved (bad derivable).

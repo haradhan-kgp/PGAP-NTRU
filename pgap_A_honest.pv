@@ -1,0 +1,126 @@
+(* ===================================================================
+   PGAP -- symbolic (Dolev-Yao) model for ProVerif 2.x
+   Scenario A : one honest tag, honest server, no key leakage.
+   NTRU is abstracted as public-key encryption whose private key is the
+   polynomial itself (f / f_i), which PGAP also uses as the plaintext.
+   Pseudonym update is NOT modelled here (the derived-hash chain makes
+   ProVerif's analysis non-terminating); it is checked in pgap.c.
+   Run:  proverif pgap_A_honest.pv
+   =================================================================== *)
+
+free c: channel.
+
+type key.
+type nonce.
+
+(* ---- NTRU abstracted as probabilistic public-key encryption.
+        The NTRU private key is the polynomial itself (f / f_i), and
+        PGAP also uses that same polynomial as the PLAINTEXT, so the
+        private key type is also the message type.                    *)
+fun pk(key): key.
+fun aenc(key, key, nonce): bitstring.
+reduc forall m: key, k: key, r: nonce; adec(aenc(m, pk(k), r), k) = m.
+
+(* ---- shared key K = (f * f_i mod q) mod p : commutative product ---- *)
+fun mulp(key, key): bitstring.
+equation forall a: key, b: key; mulp(a, b) = mulp(b, a).
+
+(* ---- hash, xor-mask, symmetric encryption (only used for a secrecy test) *)
+fun h(bitstring): bitstring.
+fun xor(bitstring, bitstring): bitstring.
+reduc forall a: bitstring, b: bitstring; unxor(xor(a, b), b) = a.
+fun senc(bitstring, bitstring): bitstring.
+reduc forall m: bitstring, k: bitstring; sdec(senc(m, k), k) = m.
+const pconst: bitstring.
+
+(* ---- long-term secrets ---- *)
+free f_srv: key [private].
+free fi1: key [private].
+free fi2: key [private].
+free x1: bitstring [private].   (* tag identifiers in the sharing scheme *)
+free x2: bitstring [private].
+free s1: bitstring [private].   (* Shamir shares s(x_i) *)
+free s2: bitstring [private].
+free secretK: bitstring [private].   (* marker: leaks iff K leaks *)
+const tag1: bitstring.
+const tag2: bitstring.
+
+(* ---- state tables (registration is over a secure channel) ---- *)
+table srvdb(bitstring, bitstring, key).   (* tag id, pseudonym, tag public key *)
+table tagids(bitstring, bitstring).       (* tag id, current pseudonym         *)
+
+(* ---- events ---- *)
+event TagSendsM2(bitstring).
+event ServerSendsV1(bitstring, bitstring).
+event TagAcceptsServer(bitstring, bitstring).
+event TagSendsV2(bitstring, bitstring).
+event ServerAcceptsTag(bitstring, bitstring).
+event ServerSendsV3(bitstring, bitstring).
+event TagDone(bitstring, bitstring).
+
+(* ---- queries ---- *)
+query attacker(f_srv).
+query attacker(fi1).
+query attacker(x1).
+query attacker(s1).
+query attacker(secretK).
+
+query k: bitstring, ei: bitstring;
+  inj-event(TagAcceptsServer(k, ei)) ==> inj-event(ServerSendsV1(k, ei)).
+query id: bitstring, k: bitstring;
+  inj-event(ServerAcceptsTag(id, k)) ==> inj-event(TagSendsV2(id, k)).
+query id: bitstring, k: bitstring;
+  inj-event(TagDone(id, k)) ==> inj-event(ServerSendsV3(id, k)).
+
+(* ---- tag ---- *)
+let Tag(id: bitstring, fi: key, x: bitstring, s: bitstring, pkS: key) =
+  get tagids(=id, ids: bitstring) in
+  new r: nonce;
+  let ei = aenc(fi, pkS, r) in                       (* e_i = p r_i h + f_i   *)
+  event TagSendsM2(id);
+  out(c, (ids, ei));                                  (* M2                    *)
+  in(c, (e: bitstring, v1: bitstring));               (* M3                    *)
+  let fb = adec(e, fi) in                             (* tag decrypts e        *)
+  let K = mulp(fi, fb) in
+  if v1 = h((K, ei, pconst)) then
+  event TagAcceptsServer(K, ei);
+  out(c, senc(secretK, K));
+  let m1 = xor(x, h((K, e, ei))) in
+  let m2 = xor(s, h((x, K))) in
+  let v2 = h((s, K)) in
+  event TagSendsV2(id, K);
+  out(c, (m1, m2, v2));                               (* M4                    *)
+  in(c, v3: bitstring);                               (* M5                    *)
+  let idsnew = h((ids, K, e, ei)) in
+  if v3 = h((K, idsnew, ei)) then
+  event TagDone(id, K);
+  0.
+
+(* ---- server ---- *)
+let Server(f: key) =
+  in(c, (ids: bitstring, ei: bitstring));             (* M2                    *)
+  get srvdb(id: bitstring, =ids, hk: key) in
+  new r2: nonce;
+  let e = aenc(f, hk, r2) in                          (* e = p r h_i + f       *)
+  let fib = adec(ei, f) in
+  let K = mulp(f, fib) in
+  event ServerSendsV1(K, ei);
+  out(c, (e, h((K, ei, pconst))));                    (* M3                    *)
+  in(c, (m1: bitstring, m2: bitstring, v2: bitstring));  (* M4                 *)
+  let x = unxor(m1, h((K, e, ei))) in
+  let s = unxor(m2, h((x, K))) in
+  if v2 = h((s, K)) then
+  event ServerAcceptsTag(id, K);
+  let idsnew = h((ids, K, e, ei)) in
+  event ServerSendsV3(id, K);
+  out(c, h((K, idsnew, ei))).                         (* M5                    *)
+
+
+process
+  out(c, pk(f_srv)); out(c, pk(fi1)); out(c, pk(fi2));
+  new ids10: bitstring; new ids20: bitstring;
+  insert tagids(tag1, ids10); insert srvdb(tag1, ids10, pk(fi1));
+  insert tagids(tag2, ids20); insert srvdb(tag2, ids20, pk(fi2));
+  ( !Server(f_srv)
+  | !Tag(tag1, fi1, x1, s1, pk(f_srv))
+ )
