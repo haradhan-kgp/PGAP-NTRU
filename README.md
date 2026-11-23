@@ -24,4 +24,3 @@ R1 SHA-256 test vector, R2 NTRU keys, R3 Shamir, R4 single session, R5 group
 authentication, R6 forged tag, R7 loss of M4/M5, R8 key agreement over 2000
 sessions, R9 protocol-level findings (observations).
 
-Verification harness only; not constant-time and not a production library.
