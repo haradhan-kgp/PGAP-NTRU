@@ -1,16 +1,7 @@
 /*
  * pgap.c -- C implementation and self-verification of PGAP
  *           (Post-quantum Group Authentication Protocol, NTRU + Shamir)
- *
  * NTRU parameters (NTRU-509, as in the paper):  N = 509, p = 3, q = 2048
- * Sampling sets: f in L(y, y-1), g, r in L(y, y)   (default y = 127, i.e.
- *                254 non-zero coefficients, same density as NTRU-HPS-2048-509)
- *
- * Build:  gcc -O2 -Wall -Wextra -o pgap pgap.c
- * Run:    ./pgap [y=127] [key_pairs=100] [sessions_per_pair=20]
- *
- * Nothing here is constant-time; this is a protocol-verification harness,
- * not a production library.
  */
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
