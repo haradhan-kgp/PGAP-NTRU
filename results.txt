@@ -1,0 +1,67 @@
+==================== PGAP verification (NTRU-509) ====================
+NTRU      : N = 509, p = 3, q = 2048
+Sets      : L_f = L(127,126) [253 non-zero], L_g = L_r = L(127,127) [254 non-zero]
+Group     : n = 10 tags, threshold k = 5, Shamir field Z_p with prime 2^61-1
+Hash      : SHA-256 (V1, V2, V3, masks, pseudonyms)   pseudonym IDS = 256 bits
+Run       : 100 key pairs x 20 sessions for the key-agreement test
+Wrap check: worst-case |3*r*g + f*f_i| = 3*254 + 253 = 1015  (< q/2 = 1024 : no wrap-around guaranteed)
+=====================================================================
+
+[R1] primitives
+  [ok] SHA-256("abc") = ba7816bf...15ad
+[R2] NTRU key generation (50 keys)
+  [ok] f * f_q = 1 (mod q)   [0 failures / 50]
+  [ok] f * f_p = 1 (mod p)   [0 failures / 50]
+  [ok] f * h   = g (mod q)   [0 failures / 50]
+[R3] Shamir (k=5, n=10, prime field Z_(2^61-1))
+  [ok] any 5 of 10 shares recover a0 (200 random subsets)
+  [ok] only 4 shares do NOT recover a0
+  [ok] r=q=2048 is not a field: x_j-x_i=2 has no inverse mod 2048 (so r must be prime)
+[R4] one full session (Steps 1-6)
+      > tag x_i=1  : V1 ok, V2 ok, V3 ok | IDS updated, tag == server IDS_cur: YES, old IDS kept as IDS_old: YES
+  [ok] V1, V2, V3 all verify
+  [ok] K (server) == K_i (tag), 509 coefficients
+  [ok] server recovered x_i and s(x_i) correctly
+  [ok] pseudonym updated and synchronised
+  [ok] server kept the previous IDS as IDS_old
+[R5] group authentication, n=10, k=5
+      > tag x_i=1  : V1 ok, V2 ok, V3 ok | IDS updated, tag == server IDS_cur: YES, old IDS kept as IDS_old: YES
+      > tag x_i=2  : V1 ok, V2 ok, V3 ok | IDS updated, tag == server IDS_cur: YES, old IDS kept as IDS_old: YES
+      > tag x_i=3  : V1 ok, V2 ok, V3 ok | IDS updated, tag == server IDS_cur: YES, old IDS kept as IDS_old: YES
+      > tag x_i=4  : V1 ok, V2 ok, V3 ok | IDS updated, tag == server IDS_cur: YES, old IDS kept as IDS_old: YES
+      > tag x_i=5  : V1 ok, V2 ok, V3 ok | IDS updated, tag == server IDS_cur: YES, old IDS kept as IDS_old: YES
+      > tag x_i=6  : V1 ok, V2 ok, V3 ok | IDS updated, tag == server IDS_cur: YES, old IDS kept as IDS_old: YES
+      > tag x_i=7  : V1 ok, V2 ok, V3 ok | IDS updated, tag == server IDS_cur: YES, old IDS kept as IDS_old: YES
+      > tag x_i=8  : V1 ok, V2 ok, V3 ok | IDS updated, tag == server IDS_cur: YES, old IDS kept as IDS_old: YES
+      > tag x_i=9  : V1 ok, V2 ok, V3 ok | IDS updated, tag == server IDS_cur: YES, old IDS kept as IDS_old: YES
+      > tag x_i=10 : V1 ok, V2 ok, V3 ok | IDS updated, tag == server IDS_cur: YES, old IDS kept as IDS_old: YES
+  >>> GROUP AUTHENTICATION (all tags): SUCCESS   [authorised 10/10 tags, threshold k=5]
+  [ok] all 10 honest tags authorised (V1, V2, V3 verified, IDS updated and matching)
+  [ok] H(a0) recovered from k shares matches stored H(a0)
+  >>> GROUP AUTHENTICATION (only 4 valid tags): FAILED (fewer than k)
+  [ok] only 4 valid tags (< k) -> group authentication fails
+[R6] forged tag (knows IDS and h, but not f_i)
+  [ok] forger cannot validate V1 (cannot derive K) -> server is also authenticated to the real tag only
+  [ok] server rejects forged M4 (V2 mismatch)
+  [ok] database entry unchanged
+[R7] desynchronisation resilience (message loss)
+      > tag x_i=4  : V1 ok | M4 LOST -> server did not update; IDS tag == server IDS_cur: YES
+  [ok] M4 lost: neither side updated, still in sync
+      > tag x_i=4  : V1 ok, V2 ok | M5 LOST -> server updated IDS, tag kept old IDS; IDS tag == server IDS_old: YES
+  [ok] M5 lost: tag holds IDS_old of the server
+      > tag x_i=4  : V1 ok, V2 ok | M5 LOST -> server updated IDS, tag kept old IDS; IDS tag == server IDS_old: YES
+  [ok] M5 lost twice in a row: server still finds the tag
+      > tag x_i=4  : V1 ok, V2 ok, V3 ok | IDS updated, tag == server IDS_cur: YES, old IDS kept as IDS_old: YES
+  [ok] next delivered session resynchronises
+[R8] key agreement over 100 key pairs x 20 sessions
+  max |coeff of f*e mod q| observed = 183  (limit 1023)
+  [ok] K != K_i in 0 / 2000 sessions (centred lift)
+  [info] naive 'residue in [0,q) mod p' (no centring) would break key agreement in 2000 / 2000 sessions
+[R9] protocol-level findings (observations, not pass/fail tests)
+  [obs] K identical in two sessions of the same tag: YES  (K = f*f_i mod p depends only on long-term keys)
+  [obs] m2 identical across sessions: YES ; V2 identical across sessions: YES  -> linkable despite pseudonyms
+  [obs] a tag recovers the server's PRIVATE key f from M3 using its own f_i, f_ip: YES
+  [obs] holder of f derives the session key K of ANOTHER tag from a sniffed M2: YES
+  [obs] tag with valid key but corrupted share passes V2: YES (V2 only proves knowledge of K)
+
+=== 23 checks, 0 failed ===
