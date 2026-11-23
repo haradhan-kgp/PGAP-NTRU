@@ -47,10 +47,5 @@ Tested with ProVerif 2.00 and later.
 | B: compromised tag | all secrecy and agreement queries fail (the tag recovers the server key f from M3) |
 | C: unlinkability | equivalence cannot be proved (K, m2, V2 repeat across sessions) |
 
-Model limits: NTRU is abstracted as ideal public-key encryption; the Shamir
-threshold and the pseudonym update chain are not modelled (they are checked in
-the C code); injective agreement is checked with one honest tag.
 
-## Status
 
-Research verification code only: not constant-time, not a production library.
