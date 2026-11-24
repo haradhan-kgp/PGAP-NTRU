@@ -4,9 +4,6 @@
    (its private key fi2 is known to the attacker).
    NTRU is abstracted as public-key encryption whose private key is the
    polynomial itself (f / f_i), which PGAP also uses as the plaintext.
-   Pseudonym update is NOT modelled here (the derived-hash chain makes
-   ProVerif's analysis non-terminating); it is checked in pgap.c.
-   Run:  proverif pgap_B_compromised_tag.pv
    =================================================================== *)
 
 free c: channel.
