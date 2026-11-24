@@ -3,8 +3,6 @@
    Left  side : two sessions of the SAME tag (tag 1).
    Right side : one session of tag 1 and one session of tag 2.
    Pseudonyms are fresh per session (ideal pseudonym update).
-   If ProVerif proves equivalence, the attacker cannot tell them apart.
-   Run:  proverif pgap_C_unlinkability.pv
    =================================================================== *)
 free c: channel.
 type key.
